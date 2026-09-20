@@ -220,6 +220,22 @@ function NumberField({ value, onChange, className }) {
   );
 }
 
+function calcIRR(cashflows) {
+  function npv(rate) {
+    return cashflows.reduce((sum, cf, t) => sum + cf / Math.pow(1 + rate, t), 0);
+  }
+  let low = -0.5, high = 1.0;
+  let npvLow = npv(low), npvHigh = npv(high);
+  if (npvLow * npvHigh > 0) return null;
+  for (let i = 0; i < 100; i++) {
+    const mid = (low + high) / 2;
+    const npvMid = npv(mid);
+    if (Math.abs(npvMid) < 1e-7) return mid;
+    if (npvLow < 0 ? npvMid < 0 : npvMid > 0) { low = mid; npvLow = npvMid; } else { high = mid; }
+  }
+  return (low + high) / 2;
+}
+
 function SudKoomDashboard() {
   const [productKey, setProductKey] = useState("adult");
   const [productAuto, setProductAuto] = useState(true);
@@ -328,6 +344,16 @@ function SudKoomDashboard() {
     return () => window.removeEventListener("resize", recompute);
   }, [fitScreen, rows, plan, productKey]);
   const maturityPayout = (totals.cumPremium || 0) + (totals.cumBonus || 0);
+
+  const irr = useMemo(() => {
+    if (!annualPremiumDisplay || !maturityPayout) return null;
+    const cashflows = new Array(planMeta.term + 1).fill(0);
+    rows.forEach((r, idx) => {
+      if (r.isPayYear) cashflows[idx] -= r.premiumThisYear;
+    });
+    cashflows[planMeta.term] += maturityPayout;
+    return calcIRR(cashflows);
+  }, [rows, planMeta, annualPremiumDisplay, maturityPayout]);
   const deathBenefitGeneral = sumInsured + maturityPayout;
   const deathBenefitAccident = sumInsured * 2 + maturityPayout;
   const monthlyPremiumForMedical = annualPremiumDisplay / 12;
@@ -705,6 +731,9 @@ function SudKoomDashboard() {
               </tfoot>
             </table>
             </div>
+          </div>
+          <div className="px-4 py-2 text-right text-sm text-gray-700 font-medium border-t border-sky-100">
+            {irr != null ? `IRR (ผลตอบแทนเมื่อครบสัญญา): ${(irr * 100).toFixed(2)}% ต่อปี` : "IRR: คำนวณไม่ได้"}
           </div>
         </div>
 
