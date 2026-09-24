@@ -212,7 +212,7 @@ function NumberField({ value, onChange, className }) {
       value={value === "" ? "" : Number(value).toLocaleString("en-US")}
       onFocus={(e) => e.target.select()}
       onChange={(e) => {
-        const raw = e.target.value.replace(/,/g, "").replace(/[^0-9.]/g, "");
+        const raw = e.target.value.replace(/,/g, "").replace(/[^0-9]/g, "");
         onChange(raw);
       }}
       className={className}
@@ -244,8 +244,8 @@ function SudKoomDashboard() {
   const [age, setAge] = useState("23");
   const [mode, setMode] = useState("premium");
   const [freqKey, setFreqKey] = useState("monthly");
-  const [premiumInput, setPremiumInput] = useState(2000);
-  const [sumInsuredInput, setSumInsuredInput] = useState(256000);
+  const [premiumInput, setPremiumInput] = useState("2000");
+  const [sumInsuredInput, setSumInsuredInput] = useState("256000");
   const [fitScreen, setFitScreen] = useState(false);
   const [guardianGender, setGuardianGender] = useState("male");
   const [guardianAge, setGuardianAge] = useState("35");
@@ -284,8 +284,9 @@ function SudKoomDashboard() {
     }
   }, [age, productAuto]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { annualPremiumDisplay, sumInsured, belowMin } = useMemo(() => {
-    if (!rate) return { annualPremiumDisplay: 0, sumInsured: 0, belowMin: false };
+  const lastValidCalcRef = useRef({ annualPremiumDisplay: 0, sumInsured: 0, belowMin: false });
+  const rawCalc = useMemo(() => {
+    if (!rate) return null;
     if (mode === "premium") {
       const perInstallment = Number(premiumInput) || 0;
       const annualDisplay = perInstallment * freq.perYear;
@@ -299,6 +300,8 @@ function SudKoomDashboard() {
       return { annualPremiumDisplay: annual, sumInsured: si, belowMin: perInstallment < freq.min };
     }
   }, [mode, premiumInput, sumInsuredInput, rate, freq]);
+  if (rawCalc) lastValidCalcRef.current = rawCalc;
+  const { annualPremiumDisplay, sumInsured, belowMin } = rawCalc || lastValidCalcRef.current;
 
   const perInstallmentDisplay =
     mode === "premium" ? Number(premiumInput) || 0 : annualPremiumDisplay / freq.perYear;
@@ -505,8 +508,14 @@ function SudKoomDashboard() {
           <div className="mb-4">
             <div className="text-sm text-slate-500 mb-2 font-medium">กำหนดจาก</div>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setMode("premium")} className={`${pillBase} ${mode === "premium" ? pillOn : pillOff}`}>เบี้ยประกันภัย</button>
-              <button onClick={() => setMode("sumInsured")} className={`${pillBase} ${mode === "sumInsured" ? pillOn : pillOff}`}>ทุนประกันที่ต้องการ</button>
+              <button
+                onClick={() => { setPremiumInput(String(Math.round(perInstallmentDisplay))); setMode("premium"); }}
+                className={`${pillBase} ${mode === "premium" ? pillOn : pillOff}`}
+              >เบี้ยประกันภัย</button>
+              <button
+                onClick={() => { setSumInsuredInput(String(Math.round(sumInsured))); setMode("sumInsured"); }}
+                className={`${pillBase} ${mode === "sumInsured" ? pillOn : pillOff}`}
+              >ทุนประกันที่ต้องการ</button>
             </div>
           </div>
 
@@ -605,7 +614,7 @@ function SudKoomDashboard() {
                     เบี้ยประกันสะสม<br /><span className="font-normal text-xs text-slate-400">Annual Premium</span>
                   </th>
                   <th className="border border-sky-100 bg-sky-50 px-3 py-3 text-slate-700 font-semibold w-32 text-base text-center">
-                    เงินจ่ายคืนพิเศษ<br /><span className="font-normal text-xs text-slate-400">{(planMeta.bonus * 100).toFixed(0)}% เมื่อครบ/เสียชีวิต</span>
+                    เงินจ่ายคืนพิเศษ<br /><span className="font-normal text-xs text-slate-400">{(planMeta.bonus * 100).toFixed(0)}% (สะสม จ่ายจริงตอนครบ/เสียชีวิต)</span>
                   </th>
                   <th className="border border-sky-100 bg-blue-100 px-4 py-3 text-blue-900 font-semibold w-48 text-base text-center">
                     ทุนประกัน
