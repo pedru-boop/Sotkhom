@@ -201,7 +201,7 @@ const FREQ = {
 // เช่น ต้องการจ่าย 2,000 บาท ช่วงเบี้ยจริงที่ยังปัดเป็น 2,000 ได้คือ 1999.50–2000.49
 // ใช้ขอบบนสุด (+0.49) ในการคำนวณทุนประกัน เพื่อให้ลูกค้าได้ทุนประกันสูงสุดโดยจ่ายเบี้ยเท่าเดิม
 const ROUNDING_EDGE = 0.49;
-const APP_VERSION = "v1.0 · 2026-09-24";
+const APP_VERSION = "v1.1 · 2026-09-25";
 
 const fmt = (n) =>
   Math.round(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -305,7 +305,9 @@ function SudKoomDashboard() {
       return { annualPremiumDisplay: annual, sumInsured: si, belowMin: perInstallment < freq.min };
     }
   }, [mode, premiumInput, sumInsuredInput, rate, freq]);
-  if (rawCalc) lastValidCalcRef.current = rawCalc;
+  useEffect(() => {
+    if (rawCalc) lastValidCalcRef.current = rawCalc;
+  }, [rawCalc]);
   const { annualPremiumDisplay, sumInsured, belowMin } = rawCalc || lastValidCalcRef.current;
 
   const perInstallmentDisplay =
